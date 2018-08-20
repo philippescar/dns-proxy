@@ -36,7 +36,7 @@ BbXaxBR98RACIQDNvEj2uojQfY2sV94kkJJxAAMXwejQpji6wjEEkOSqDg==
 -----END CERTIFICATE-----
 `
 
-const loAddr string = "127.0.0.1:10053"
+const loAddr string = "127.0.0.1:53"
 const reAddr string = "cloudflare-dns.com:853"
 
 func main() {
