@@ -2,12 +2,13 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net"
 )
 
-const serverKey = `-----BEGIN EC PARAMETERS-----
+const clientKey = `-----BEGIN EC PARAMETERS-----
 BggqhkjOPQMBBw==
 -----END EC PARAMETERS-----
 -----BEGIN EC PRIVATE KEY-----
@@ -17,7 +18,7 @@ ReTmha0G+V5a3fKiJfxQgU69hyPgMW60tA==
 -----END EC PRIVATE KEY-----
 `
 
-const serverCert = `-----BEGIN CERTIFICATE-----
+const clientCert = `-----BEGIN CERTIFICATE-----
 MIIClzCCAj2gAwIBAgIJALbSpDn+Z1c9MAkGByqGSM49BAEwaTELMAkGA1UEBhMC
 REUxDzANBgNVBAgTBkJlcmxpbjEPMA0GA1UEBxMGQmVybGluMREwDwYDVQQKEwhQ
 aGlsIENvLjElMCMGCSqGSIb3DQEJARYWcGNhcnZhbGhvLnRpQGdtYWlsLmNvbTAe
@@ -40,21 +41,40 @@ const reAddr string = "cloudflare-dns.com:853"
 
 func main() {
 	// Checking if the cert is valid
-	cert, err := tls.X509KeyPair([]byte(serverCert), []byte(serverKey))
+	cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
 	if err != nil {
 		fmt.Println("Something is wrong with Certificate, please check")
 	}
 	config := &tls.Config{Certificates: []tls.Certificate{cert}}
 
 	//Opening Listener
-	ln, err := tls.Listen("tcp", loAddr, config)
+	ln, err := net.Listen("tcp", loAddr)
 	if err != nil {
 		fmt.Println("Listeners Could not be opened")
 	}
 	defer ln.Close()
 
 	// Giving some feedback
-	fmt.Println("Launching Local DNS server...")
+	fmt.Println("Launching Local Listener...")
+
+	// Starting TLS Handshake
+	fmt.Println("Starting TLS handshake... wish me luck")
+
+	conn, err := tls.Dial("tcp", reAddr, config)
+	if err != nil {
+		log.Fatalf("Oopps.. %s", err)
+	}
+
+	defer conn.Close()
+	log.Println("Phew... Client connected to ", reAddr)
+
+	state := conn.ConnectionState()
+	for _, v := range state.PeerCertificates {
+		fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+		fmt.Println(v.Subject)
+	}
+	log.Println("The art of the Handshake: ", state.HandshakeComplete)
+	log.Println("Mutual Handshake: ", state.NegotiatedProtocolIsMutual)
 
 	// accept connection on port
 	fmt.Println("DNS server is accepting connections")
